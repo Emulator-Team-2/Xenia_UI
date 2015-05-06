@@ -4730,20 +4730,21 @@ EMITTER(VECTOR_SHL_V128, MATCH(I<OPCODE_VECTOR_SHL, V128<>, V128<>, V128<>>)) {
     return _mm_load_si128(reinterpret_cast<__m128i*>(value));
   }
   static void EmitInt32(X64Emitter& e, const EmitArgType& i) {
-    if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
-      if (i.src2.is_constant) {
-        const auto& shamt = i.src2.constant();
-        bool all_same = true;
-        for (size_t n = 0; n < 4 - n; ++n) {
-          if (shamt.u32[n] != shamt.u32[n + 1]) {
-            all_same = false;
-            break;
-          }
+    if (i.src2.is_constant) {
+      const auto& shamt = i.src2.constant();
+      bool all_same = true;
+      for (size_t n = 0; n < 4 - n; ++n) {
+        if (shamt.u32[n] != shamt.u32[n + 1]) {
+          all_same = false;
+          break;
         }
-        if (all_same) {
-          // Every count is the same, so we can use vpslld.
-          e.vpslld(i.dest, i.src1, shamt.u8[0] & 0x1F);
-        } else {
+      }
+      if (all_same) {
+        // Every count is the same, so we can use vpslld.
+        e.vpslld(i.dest, i.src1, shamt.u8[0] & 0x1F);
+        return;
+      } else {
+        if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
           // Counts differ, so pre-mask and load constant.
           vec128_t masked = i.src2.constant();
           for (size_t n = 0; n < 4; ++n) {
@@ -4751,26 +4752,30 @@ EMITTER(VECTOR_SHL_V128, MATCH(I<OPCODE_VECTOR_SHL, V128<>, V128<>, V128<>>)) {
           }
           e.LoadConstantXmm(e.xmm0, masked);
           e.vpsllvd(i.dest, i.src1, e.xmm0);
+          return;
         }
-      } else {
+      }
+    } else {
+      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
         // Fully variable shift.
         // src shift mask may have values >31, and x86 sets to zero when
         // that happens so we mask.
         e.vandps(e.xmm0, i.src2, e.GetXmmConstPtr(XMMShiftMaskPS));
         e.vpsllvd(i.dest, i.src1, e.xmm0);
+        return;
       }
-    } else {
-      // TODO(benvanik): native version (with shift magic).
-      if (i.src2.is_constant) {
-        e.LoadConstantXmm(e.xmm0, i.src2.constant());
-        e.lea(e.r9, e.StashXmm(1, e.xmm0));
-      } else {
-        e.lea(e.r9, e.StashXmm(1, i.src2));
-      }
-      e.lea(e.r8, e.StashXmm(0, i.src1));
-      e.CallNativeSafe(reinterpret_cast<void*>(EmulateVectorShlI32));
-      e.vmovaps(i.dest, e.xmm0);
     }
+
+    // TODO(benvanik): native version (with shift magic).
+    if (i.src2.is_constant) {
+      e.LoadConstantXmm(e.xmm0, i.src2.constant());
+      e.lea(e.r9, e.StashXmm(1, e.xmm0));
+    } else {
+      e.lea(e.r9, e.StashXmm(1, i.src2));
+    }
+    e.lea(e.r8, e.StashXmm(0, i.src1));
+    e.CallNativeSafe(reinterpret_cast<void*>(EmulateVectorShlI32));
+    e.vmovaps(i.dest, e.xmm0);
   }
 };
 EMITTER_OPCODE_TABLE(
