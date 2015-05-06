@@ -35,13 +35,13 @@ PPCScanner::~PPCScanner() {}
 
 bool PPCScanner::IsRestGprLr(uint32_t address) {
   FunctionInfo* symbol_info;
-  if (frontend_->processor()->LookupFunctionInfo(address, &symbol_info)) {
+  if (!frontend_->processor()->LookupFunctionInfo(address, &symbol_info)) {
     return false;
   }
   return symbol_info->behavior() == FunctionInfo::BEHAVIOR_EPILOG_RETURN;
 }
 
-int PPCScanner::FindExtents(FunctionInfo* symbol_info) {
+bool PPCScanner::Scan(FunctionInfo* symbol_info, DebugInfo* debug_info) {
   // This is a simple basic block analyizer. It walks the start address to the
   // end address looking for branches. Each span of instructions between
   // branches is considered a basic block. When the last blr (that has no
@@ -52,6 +52,10 @@ int PPCScanner::FindExtents(FunctionInfo* symbol_info) {
   Memory* memory = frontend_->memory();
 
   LOGPPC("Analyzing function %.8X...", symbol_info->address());
+
+  // For debug info, only if needed.
+  uint32_t address_reference_count = 0;
+  uint32_t instruction_result_count = 0;
 
   uint32_t start_address = static_cast<uint32_t>(symbol_info->address());
   uint32_t end_address = static_cast<uint32_t>(symbol_info->end_address());
@@ -77,6 +81,10 @@ int PPCScanner::FindExtents(FunctionInfo* symbol_info) {
     // TODO(benvanik): find a way to avoid using the opcode tables.
     // This lookup is *expensive* and should be avoided when scanning.
     i.type = GetInstrType(i.code);
+
+    // TODO(benvanik): switch on instruction metadata.
+    ++address_reference_count;
+    ++instruction_result_count;
 
     // Check if the function starts with a mfspr lr, as that's a good indication
     // of whether or not this is a normal function with a prolog/epilog.
@@ -274,8 +282,13 @@ int PPCScanner::FindExtents(FunctionInfo* symbol_info) {
   // - if present, flag function as needing a stack
   // - record prolog/epilog lengths/stack size/etc
 
+  if (debug_info) {
+    debug_info->set_address_reference_count(address_reference_count);
+    debug_info->set_instruction_result_count(instruction_result_count);
+  }
+
   LOGPPC("Finished analyzing %.8X", start_address);
-  return 0;
+  return true;
 }
 
 std::vector<BlockInfo> PPCScanner::FindBlocks(FunctionInfo* symbol_info) {

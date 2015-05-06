@@ -2,25 +2,20 @@
  ******************************************************************************
  * Xenia : Xbox 360 Emulator Research Project                                 *
  ******************************************************************************
- * Copyright 2013 Ben Vanik. All rights reserved.                             *
+ * Copyright 2015 Ben Vanik. All rights reserved.                             *
  * Released under the BSD license - see LICENSE in the root for more details. *
  ******************************************************************************
  */
 
-#include "xenia/cpu/backend/assembler.h"
+#ifndef XENIA_DEBUG_DEBUG_SERVER_H_
+#define XENIA_DEBUG_DEBUG_SERVER_H_
 
 namespace xe {
-namespace cpu {
-namespace backend {
+namespace debug {
 
-Assembler::Assembler(Backend* backend) : backend_(backend) {}
+//
 
-Assembler::~Assembler() { Reset(); }
-
-bool Assembler::Initialize() { return true; }
-
-void Assembler::Reset() {}
-
-}  // namespace backend
-}  // namespace cpu
+}  // namespace debug
 }  // namespace xe
+
+#endif  // XENIA_DEBUG_DEBUG_SERVER_H_

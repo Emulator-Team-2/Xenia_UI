@@ -15,6 +15,7 @@
 
 #include "xenia/base/arena.h"
 #include "xenia/cpu/hir/value.h"
+#include "xenia/debug/trace_data.h"
 
 namespace xe {
 namespace cpu {
@@ -105,11 +106,9 @@ class X64Emitter : public Xbyak::CodeGenerator {
   X64Backend* backend() const { return backend_; }
   const Xbyak::util::Cpu* cpu() const { return &cpu_; }
 
-  int Initialize();
-
-  int Emit(hir::HIRBuilder* builder, uint32_t debug_info_flags,
-           DebugInfo* debug_info, uint32_t trace_flags, void*& out_code_address,
-           size_t& out_code_size);
+  bool Emit(hir::HIRBuilder* builder, uint32_t debug_info_flags,
+            DebugInfo* debug_info, void*& out_code_address,
+            size_t& out_code_size);
 
  public:
   // Reserved:  rsp
@@ -178,11 +177,13 @@ class X64Emitter : public Xbyak::CodeGenerator {
   void LoadConstantXmm(Xbyak::Xmm dest, const vec128_t& v);
   Xbyak::Address StashXmm(int index, const Xbyak::Xmm& r);
 
+  DebugInfo* debug_info() const { return debug_info_; }
+
   size_t stack_size() const { return stack_size_; }
 
  protected:
   void* Emplace(size_t stack_size);
-  int Emit(hir::HIRBuilder* builder, size_t& out_stack_size);
+  bool Emit(hir::HIRBuilder* builder, size_t& out_stack_size);
   void EmitGetCurrentThreadId();
   void EmitTraceUserCallReturn();
 
@@ -195,12 +196,12 @@ class X64Emitter : public Xbyak::CodeGenerator {
 
   hir::Instr* current_instr_;
 
+  DebugInfo* debug_info_;
+  uint32_t debug_info_flags_;
   size_t source_map_count_;
   Arena source_map_arena_;
 
   size_t stack_size_;
-
-  uint32_t trace_flags_;
 
   static const uint32_t gpr_reg_map_[GPR_COUNT];
   static const uint32_t xmm_reg_map_[XMM_COUNT];

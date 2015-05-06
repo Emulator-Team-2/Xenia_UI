@@ -7,35 +7,39 @@
  ******************************************************************************
  */
 
-#ifndef XENIA_CPU_RAW_MODULE_H_
-#define XENIA_CPU_RAW_MODULE_H_
+#ifndef XENIA_DEBUG_BREAKPOINT_H_
+#define XENIA_DEBUG_BREAKPOINT_H_
 
 #include <string>
 
-#include "xenia/cpu/module.h"
-
 namespace xe {
-namespace cpu {
+namespace debug {
 
-class RawModule : public Module {
+class Breakpoint {
  public:
-  RawModule(Processor* processor);
-  ~RawModule() override;
+  enum Type {
+    TEMP_TYPE,
+    CODE_TYPE,
+  };
 
-  bool LoadFile(uint32_t base_address, const std::wstring& path);
+ public:
+  Breakpoint(Type type, uint32_t address);
+  ~Breakpoint();
 
-  const std::string& name() const override { return name_; }
+  Type type() const { return type_; }
+  uint32_t address() const { return address_; }
 
-  bool ContainsAddress(uint32_t address) override;
+  const char* id() const { return id_.c_str(); }
+  void set_id(const char* id) { id_ = std::string(id); }
 
  private:
-  std::string name_;
-  uint32_t base_address_;
-  uint32_t low_address_;
-  uint32_t high_address_;
+  Type type_;
+  uint32_t address_;
+
+  std::string id_;
 };
 
-}  // namespace cpu
+}  // namespace debug
 }  // namespace xe
 
-#endif  // XENIA_CPU_RAW_MODULE_H_
+#endif  // XENIA_DEBUG_BREAKPOINT_H_

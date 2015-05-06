@@ -21,6 +21,7 @@
 #include "xenia/cpu/frontend/ppc_instr.h"
 #include "xenia/cpu/frontend/ppc_scanner.h"
 #include "xenia/cpu/processor.h"
+#include "xenia/debug/debugger.h"
 #include "xenia/profiling.h"
 
 namespace xe {
@@ -86,9 +87,9 @@ PPCTranslator::PPCTranslator(PPCFrontend* frontend) : frontend_(frontend) {
 
 PPCTranslator::~PPCTranslator() = default;
 
-int PPCTranslator::Translate(FunctionInfo* symbol_info,
-                             uint32_t debug_info_flags, uint32_t trace_flags,
-                             Function** out_function) {
+bool PPCTranslator::Translate(FunctionInfo* symbol_info,
+                              uint32_t debug_info_flags,
+                              Function** out_function) {
   SCOPE_profile_cpu_f("cpu");
 
   // Reset() all caching when we leave.
@@ -97,29 +98,51 @@ int PPCTranslator::Translate(FunctionInfo* symbol_info,
   xe::make_reset_scope(assembler_);
   xe::make_reset_scope(&string_buffer_);
 
-  // Scan the function to find its extents. We only need to do this if we
-  // haven't already been provided with them from some other source.
-  if (!symbol_info->has_end_address()) {
-    // TODO(benvanik): find a way to remove the need for the scan. A fixup
-    //     scheme acting on branches could go back and modify calls to branches
-    //     if they are within the extents.
-    int result = scanner_->FindExtents(symbol_info);
-    if (result) {
-      return result;
-    }
-  }
-
   // NOTE: we only want to do this when required, as it's expensive to build.
   if (FLAGS_always_disasm) {
-    debug_info_flags |= DEBUG_INFO_ALL_DISASM;
+    debug_info_flags |= DebugInfoFlags::kDebugInfoAllDisasm;
+  }
+  if (FLAGS_trace_functions) {
+    debug_info_flags |= DebugInfoFlags::kDebugInfoTraceFunctions;
+  }
+  if (FLAGS_trace_function_coverage) {
+    debug_info_flags |= DebugInfoFlags::kDebugInfoTraceFunctionCoverage;
+  }
+  if (FLAGS_trace_function_references) {
+    debug_info_flags |= DebugInfoFlags::kDebugInfoTraceFunctionReferences;
+  }
+  if (FLAGS_trace_function_data) {
+    debug_info_flags |= DebugInfoFlags::kDebugInfoTraceFunctionData;
   }
   std::unique_ptr<DebugInfo> debug_info;
   if (debug_info_flags) {
     debug_info.reset(new DebugInfo());
   }
 
+  // Scan the function to find its extents and gather debug data.
+  if (!scanner_->Scan(symbol_info, debug_info.get())) {
+    return false;
+  }
+
+  // Setup trace data, if needed.
+  if (debug_info_flags & DebugInfoFlags::kDebugInfoTraceFunctions) {
+    // Base trace data.
+    size_t trace_data_size = debug::FunctionTraceData::SizeOfHeader();
+    if (debug_info_flags & DebugInfoFlags::kDebugInfoTraceFunctionCoverage) {
+      // Additional space for instruction coverage counts.
+      trace_data_size += debug::FunctionTraceData::SizeOfInstructionCounts(
+          symbol_info->address(), symbol_info->end_address());
+    }
+    uint8_t* trace_data =
+        frontend_->processor()->debugger()->AllocateTraceFunctionData(
+            trace_data_size);
+    debug_info->trace_data().Reset(trace_data, trace_data_size,
+                                   symbol_info->address(),
+                                   symbol_info->end_address());
+  }
+
   // Stash source.
-  if (debug_info_flags & DEBUG_INFO_SOURCE_DISASM) {
+  if (debug_info_flags & DebugInfoFlags::kDebugInfoDisasmSource) {
     DumpSource(symbol_info, &string_buffer_);
     debug_info->set_source_disasm(string_buffer_.ToString());
     string_buffer_.Reset();
@@ -134,40 +157,36 @@ int PPCTranslator::Translate(FunctionInfo* symbol_info,
   if (debug_info) {
     emit_flags |= PPCHIRBuilder::EMIT_DEBUG_COMMENTS;
   }
-  int result = builder_->Emit(symbol_info, emit_flags);
-  if (result) {
-    return result;
+  if (!builder_->Emit(symbol_info, emit_flags)) {
+    return false;
   }
 
   // Stash raw HIR.
-  if (debug_info_flags & DEBUG_INFO_RAW_HIR_DISASM) {
+  if (debug_info_flags & DebugInfoFlags::kDebugInfoDisasmRawHir) {
     builder_->Dump(&string_buffer_);
     debug_info->set_raw_hir_disasm(string_buffer_.ToString());
     string_buffer_.Reset();
   }
 
   // Compile/optimize/etc.
-  result = compiler_->Compile(builder_.get());
-  if (result) {
-    return result;
+  if (!compiler_->Compile(builder_.get())) {
+    return false;
   }
 
   // Stash optimized HIR.
-  if (debug_info_flags & DEBUG_INFO_HIR_DISASM) {
+  if (debug_info_flags & DebugInfoFlags::kDebugInfoDisasmHir) {
     builder_->Dump(&string_buffer_);
     debug_info->set_hir_disasm(string_buffer_.ToString());
     string_buffer_.Reset();
   }
 
   // Assemble to backend machine code.
-  result =
-      assembler_->Assemble(symbol_info, builder_.get(), debug_info_flags,
-                           std::move(debug_info), trace_flags, out_function);
-  if (result) {
-    return result;
+  if (!assembler_->Assemble(symbol_info, builder_.get(), debug_info_flags,
+                            std::move(debug_info), out_function)) {
+    return false;
   }
 
-  return 0;
+  return true;
 };
 
 void PPCTranslator::DumpSource(FunctionInfo* symbol_info,

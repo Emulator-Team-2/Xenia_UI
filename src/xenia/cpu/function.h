@@ -16,11 +16,11 @@
 
 #include "xenia/cpu/debug_info.h"
 #include "xenia/cpu/thread_state.h"
+#include "xenia/debug/breakpoint.h"
 
 namespace xe {
 namespace cpu {
 
-class Breakpoint;
 class FunctionInfo;
 
 class Function {
@@ -36,16 +36,16 @@ class Function {
     debug_info_ = std::move(debug_info);
   }
 
-  int AddBreakpoint(Breakpoint* breakpoint);
-  int RemoveBreakpoint(Breakpoint* breakpoint);
+  bool AddBreakpoint(debug::Breakpoint* breakpoint);
+  bool RemoveBreakpoint(debug::Breakpoint* breakpoint);
 
-  int Call(ThreadState* thread_state, uint32_t return_address);
+  bool Call(ThreadState* thread_state, uint32_t return_address);
 
  protected:
-  Breakpoint* FindBreakpoint(uint32_t address);
-  virtual int AddBreakpointImpl(Breakpoint* breakpoint) { return 0; }
-  virtual int RemoveBreakpointImpl(Breakpoint* breakpoint) { return 0; }
-  virtual int CallImpl(ThreadState* thread_state, uint32_t return_address) = 0;
+  debug::Breakpoint* FindBreakpoint(uint32_t address);
+  virtual bool AddBreakpointImpl(debug::Breakpoint* breakpoint) { return 0; }
+  virtual bool RemoveBreakpointImpl(debug::Breakpoint* breakpoint) { return 0; }
+  virtual bool CallImpl(ThreadState* thread_state, uint32_t return_address) = 0;
 
  protected:
   uint32_t address_;
@@ -54,7 +54,7 @@ class Function {
 
   // TODO(benvanik): move elsewhere? DebugData?
   std::mutex lock_;
-  std::vector<Breakpoint*> breakpoints_;
+  std::vector<debug::Breakpoint*> breakpoints_;
 };
 
 }  // namespace cpu

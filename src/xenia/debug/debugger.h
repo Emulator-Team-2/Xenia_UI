@@ -7,48 +7,32 @@
  ******************************************************************************
  */
 
-#ifndef XENIA_CPU_DEBUGGER_H_
-#define XENIA_CPU_DEBUGGER_H_
+#ifndef XENIA_DEBUG_DEBUGGER_H_
+#define XENIA_DEBUG_DEBUGGER_H_
 
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 
 #include "xenia/base/delegate.h"
+#include "xenia/base/mapped_memory.h"
 #include "xenia/cpu/thread_state.h"
+#include "xenia/debug/breakpoint.h"
 
 namespace xe {
 namespace cpu {
-
-class Debugger;
 class Function;
 class FunctionInfo;
 class Processor;
+}  // namespace cpu
+}  // namespace xe
 
-class Breakpoint {
- public:
-  enum Type {
-    TEMP_TYPE,
-    CODE_TYPE,
-  };
+namespace xe {
+namespace debug {
 
- public:
-  Breakpoint(Type type, uint32_t address);
-  ~Breakpoint();
-
-  Type type() const { return type_; }
-  uint32_t address() const { return address_; }
-
-  const char* id() const { return id_.c_str(); }
-  void set_id(const char* id) { id_ = std::string(id); }
-
- private:
-  Type type_;
-  uint32_t address_;
-
-  std::string id_;
-};
+class Debugger;
 
 class DebugEvent {
  public:
@@ -62,32 +46,38 @@ class DebugEvent {
 
 class BreakpointHitEvent : public DebugEvent {
  public:
-  BreakpointHitEvent(Debugger* debugger, ThreadState* thread_state,
+  BreakpointHitEvent(Debugger* debugger, cpu::ThreadState* thread_state,
                      Breakpoint* breakpoint)
       : DebugEvent(debugger),
         thread_state_(thread_state),
         breakpoint_(breakpoint) {}
   ~BreakpointHitEvent() override = default;
-  ThreadState* thread_state() const { return thread_state_; }
+  cpu::ThreadState* thread_state() const { return thread_state_; }
   Breakpoint* breakpoint() const { return breakpoint_; }
 
  protected:
-  ThreadState* thread_state_;
+  cpu::ThreadState* thread_state_;
   Breakpoint* breakpoint_;
 };
 
 class Debugger {
  public:
-  Debugger(Processor* processor);
+  Debugger(cpu::Processor* processor);
   ~Debugger();
 
-  Processor* processor() const { return processor_; }
+  cpu::Processor* processor() const { return processor_; }
+
+  bool StartSession();
+  void StopSession();
+  void FlushSession();
+
+  uint8_t* AllocateTraceFunctionData(size_t size);
 
   int SuspendAllThreads(uint32_t timeout_ms = UINT_MAX);
   int ResumeThread(uint32_t thread_id);
   int ResumeAllThreads(bool force = false);
 
-  void ForEachThread(std::function<void(ThreadState*)> callback);
+  void ForEachThread(std::function<void(cpu::ThreadState*)> callback);
 
   int AddBreakpoint(Breakpoint* breakpoint);
   int RemoveBreakpoint(Breakpoint* breakpoint);
@@ -97,26 +87,29 @@ class Debugger {
   // TODO(benvanik): utility functions for modification (make function ignored,
   // etc).
 
-  void OnThreadCreated(ThreadState* thread_state);
-  void OnThreadDestroyed(ThreadState* thread_state);
-  void OnFunctionDefined(FunctionInfo* symbol_info, Function* function);
+  void OnThreadCreated(cpu::ThreadState* thread_state);
+  void OnThreadDestroyed(cpu::ThreadState* thread_state);
+  void OnFunctionDefined(cpu::FunctionInfo* symbol_info,
+                         cpu::Function* function);
 
-  void OnBreakpointHit(ThreadState* thread_state, Breakpoint* breakpoint);
+  void OnBreakpointHit(cpu::ThreadState* thread_state, Breakpoint* breakpoint);
 
  public:
   Delegate<BreakpointHitEvent> breakpoint_hit;
 
  private:
-  Processor* processor_;
+  cpu::Processor* processor_;
+
+  std::unique_ptr<ChunkedMappedMemoryWriter> trace_functions_;
 
   std::mutex threads_lock_;
-  std::unordered_map<uint32_t, ThreadState*> threads_;
+  std::unordered_map<uint32_t, cpu::ThreadState*> threads_;
 
   std::mutex breakpoints_lock_;
   std::multimap<uint32_t, Breakpoint*> breakpoints_;
 };
 
-}  // namespace cpu
+}  // namespace debug
 }  // namespace xe
 
-#endif  // XENIA_CPU_DEBUGGER_H_
+#endif  // XENIA_DEBUG_DEBUGGER_H_

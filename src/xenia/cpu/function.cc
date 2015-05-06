@@ -10,19 +10,20 @@
 #include "xenia/cpu/function.h"
 
 #include "xenia/base/logging.h"
-#include "xenia/cpu/debugger.h"
 #include "xenia/cpu/symbol_info.h"
 #include "xenia/cpu/thread_state.h"
 
 namespace xe {
 namespace cpu {
 
+using xe::debug::Breakpoint;
+
 Function::Function(FunctionInfo* symbol_info)
     : address_(symbol_info->address()), symbol_info_(symbol_info) {}
 
 Function::~Function() = default;
 
-int Function::AddBreakpoint(Breakpoint* breakpoint) {
+bool Function::AddBreakpoint(Breakpoint* breakpoint) {
   std::lock_guard<std::mutex> guard(lock_);
   bool found = false;
   for (auto other : breakpoints_) {
@@ -31,25 +32,25 @@ int Function::AddBreakpoint(Breakpoint* breakpoint) {
       break;
     }
   }
-  if (!found) {
+  if (found) {
+    return true;
+  } else {
     breakpoints_.push_back(breakpoint);
-    AddBreakpointImpl(breakpoint);
+    return AddBreakpointImpl(breakpoint);
   }
-  return found ? 1 : 0;
 }
 
-int Function::RemoveBreakpoint(Breakpoint* breakpoint) {
+bool Function::RemoveBreakpoint(Breakpoint* breakpoint) {
   std::lock_guard<std::mutex> guard(lock_);
-  bool found = false;
   for (auto it = breakpoints_.begin(); it != breakpoints_.end(); ++it) {
     if (*it == breakpoint) {
+      if (!RemoveBreakpointImpl(breakpoint)) {
+        return false;
+      }
       breakpoints_.erase(it);
-      RemoveBreakpointImpl(breakpoint);
-      found = true;
-      break;
     }
   }
-  return found ? 0 : 1;
+  return false;
 }
 
 Breakpoint* Function::FindBreakpoint(uint32_t address) {
@@ -64,7 +65,7 @@ Breakpoint* Function::FindBreakpoint(uint32_t address) {
   return result;
 }
 
-int Function::Call(ThreadState* thread_state, uint32_t return_address) {
+bool Function::Call(ThreadState* thread_state, uint32_t return_address) {
   // SCOPE_profile_cpu_f("cpu");
 
   ThreadState* original_thread_state = ThreadState::Get();
@@ -72,7 +73,7 @@ int Function::Call(ThreadState* thread_state, uint32_t return_address) {
     ThreadState::Bind(thread_state);
   }
 
-  int result = 0;
+  bool result = true;
 
   if (symbol_info_->behavior() == FunctionInfo::BEHAVIOR_EXTERN) {
     auto handler = symbol_info_->extern_handler();
@@ -83,7 +84,7 @@ int Function::Call(ThreadState* thread_state, uint32_t return_address) {
     } else {
       XELOGW("undefined extern call to %.8llX %s", symbol_info_->address(),
              symbol_info_->name().c_str());
-      result = 1;
+      result = false;
     }
   } else {
     CallImpl(thread_state, return_address);

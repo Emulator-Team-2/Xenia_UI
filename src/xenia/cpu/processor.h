@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "xenia/cpu/backend/backend.h"
-#include "xenia/cpu/debugger.h"
 #include "xenia/cpu/entry_table.h"
 #include "xenia/cpu/export_resolver.h"
 #include "xenia/cpu/frontend/ppc_frontend.h"
@@ -24,9 +23,14 @@
 #include "xenia/memory.h"
 
 namespace xe {
+namespace debug {
+class Debugger;
+}  // namespace debug
+}  // namespace xe
+
+namespace xe {
 namespace cpu {
 
-class Runtime;
 class ThreadState;
 class XexModule;
 
@@ -43,14 +47,14 @@ class Processor {
   ~Processor();
 
   Memory* memory() const { return memory_; }
-  Debugger* debugger() const { return debugger_.get(); }
+  debug::Debugger* debugger() const { return debugger_.get(); }
   frontend::PPCFrontend* frontend() const { return frontend_.get(); }
   backend::Backend* backend() const { return backend_.get(); }
   ExportResolver* export_resolver() const { return export_resolver_; }
 
-  int Setup();
+  bool Setup();
 
-  int AddModule(std::unique_ptr<Module> module);
+  bool AddModule(std::unique_ptr<Module> module);
   Module* GetModule(const char* name);
   Module* GetModule(const std::string& name) { return GetModule(name.c_str()); }
   std::vector<Module*> GetModules();
@@ -62,12 +66,12 @@ class Processor {
 
   std::vector<Function*> FindFunctionsWithAddress(uint32_t address);
 
-  int LookupFunctionInfo(uint32_t address, FunctionInfo** out_symbol_info);
-  int LookupFunctionInfo(Module* module, uint32_t address,
-                         FunctionInfo** out_symbol_info);
-  int ResolveFunction(uint32_t address, Function** out_function);
+  bool LookupFunctionInfo(uint32_t address, FunctionInfo** out_symbol_info);
+  bool LookupFunctionInfo(Module* module, uint32_t address,
+                          FunctionInfo** out_symbol_info);
+  bool ResolveFunction(uint32_t address, Function** out_function);
 
-  int Execute(ThreadState* thread_state, uint32_t address);
+  bool Execute(ThreadState* thread_state, uint32_t address);
   uint64_t Execute(ThreadState* thread_state, uint32_t address, uint64_t args[],
                    size_t arg_count);
 
@@ -78,14 +82,13 @@ class Processor {
                             size_t arg_count);
 
  private:
-  int DemandFunction(FunctionInfo* symbol_info, Function** out_function);
+  bool DemandFunction(FunctionInfo* symbol_info, Function** out_function);
 
   Memory* memory_;
 
   uint32_t debug_info_flags_;
-  uint32_t trace_flags_;
 
-  std::unique_ptr<Debugger> debugger_;
+  std::unique_ptr<debug::Debugger> debugger_;
 
   std::unique_ptr<frontend::PPCFrontend> frontend_;
   std::unique_ptr<backend::Backend> backend_;

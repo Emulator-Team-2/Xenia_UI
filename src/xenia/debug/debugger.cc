@@ -7,24 +7,59 @@
  ******************************************************************************
  */
 
-#include "xenia/cpu/debugger.h"
+#include "xenia/debug/debugger.h"
+
+#include <gflags/gflags.h>
 
 #include <mutex>
 
+#include "xenia/base/string.h"
 #include "xenia/cpu/function.h"
 #include "xenia/cpu/processor.h"
 
+DEFINE_string(debug_session_path, "", "Debug output path.");
+
 namespace xe {
-namespace cpu {
+namespace debug {
+
+using xe::cpu::ThreadState;
 
 Breakpoint::Breakpoint(Type type, uint32_t address)
     : type_(type), address_(address) {}
 
 Breakpoint::~Breakpoint() = default;
 
-Debugger::Debugger(Processor* processor) : processor_(processor) {}
+Debugger::Debugger(cpu::Processor* processor) : processor_(processor) {}
 
 Debugger::~Debugger() = default;
+
+bool Debugger::StartSession() {
+  std::wstring session_path = xe::to_wstring(FLAGS_debug_session_path);
+
+  std::wstring trace_functions_path =
+      xe::join_paths(session_path, L"trace.functions");
+  trace_functions_ = ChunkedMappedMemoryWriter::Open(trace_functions_path,
+                                                     32 * 1024 * 1024, true);
+  return true;
+}
+
+void Debugger::StopSession() {
+  FlushSession();
+  trace_functions_.reset();
+}
+
+void Debugger::FlushSession() {
+  if (trace_functions_) {
+    trace_functions_->Flush();
+  }
+}
+
+uint8_t* Debugger::AllocateTraceFunctionData(size_t size) {
+  if (!trace_functions_) {
+    return nullptr;
+  }
+  return trace_functions_->Allocate(size);
+}
 
 int Debugger::SuspendAllThreads(uint32_t timeout_ms) {
   std::lock_guard<std::mutex> guard(threads_lock_);
@@ -156,8 +191,8 @@ void Debugger::OnThreadDestroyed(ThreadState* thread_state) {
   }
 }
 
-void Debugger::OnFunctionDefined(FunctionInfo* symbol_info,
-                                 Function* function) {
+void Debugger::OnFunctionDefined(cpu::FunctionInfo* symbol_info,
+                                 cpu::Function* function) {
   // Man, I'd love not to take this lock.
   std::vector<Breakpoint*> breakpoints;
   {
@@ -195,5 +230,5 @@ void Debugger::OnBreakpointHit(ThreadState* thread_state,
   // Note that we stay suspended.
 }
 
-}  // namespace cpu
+}  // namespace debug
 }  // namespace xe
