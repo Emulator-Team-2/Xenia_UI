@@ -8,6 +8,7 @@
     'byte_order.h',
     'debugging.h',
     'delegate.h',
+	'disc_device_win.cc',
     'fs.h',
     'fs.cc',
     'logging.cc',
