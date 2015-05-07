@@ -28,6 +28,9 @@ class DiscDevice {
     // Get sector size in bytes
     virtual uint32_t GetSectorSize() = 0;
 
+    // Get size of disc in bytes
+    virtual size_t GetSize() = 0;
+
     // Seek to address
     virtual void Seek(uint64_t addr) = 0;
 

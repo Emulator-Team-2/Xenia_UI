@@ -37,6 +37,9 @@ class Win32DiscDevice : public DiscDevice {
     // Get sector size in bytes
     virtual uint32_t GetSectorSize();
 
+    // Get size of disc in bytes
+    virtual size_t GetSize();
+
     // Seek to address
     virtual void Seek(uint64_t addr);
 
@@ -47,7 +50,7 @@ class Win32DiscDevice : public DiscDevice {
     friend class DiscDevice;
 
     std::wstring path;
-    HANDLE hDevice;
+    HANDLE hDevice_;
 };
 
 std::unique_ptr<DiscDevice> DiscDevice::Open(const std::wstring& path) {
@@ -58,7 +61,7 @@ std::unique_ptr<DiscDevice> DiscDevice::Open(const std::wstring& path) {
   }
 
   auto dev = std::make_unique<Win32DiscDevice>();
-  dev->hDevice = hDevice;
+  dev->hDevice_ = hDevice;
 
   return std::move(dev);
 }
@@ -68,7 +71,7 @@ void Win32DiscDevice::Lock(bool locked) {
 
   PREVENT_MEDIA_REMOVAL pmrLock;
   pmrLock.PreventMediaRemoval = locked;
-  DeviceIoControl(hDevice, IOCTL_CDROM_MEDIA_REMOVAL, &pmrLock,
+  DeviceIoControl(hDevice_, IOCTL_CDROM_MEDIA_REMOVAL, &pmrLock,
                   sizeof(pmrLock), NULL, 0, &dwUnused, NULL);
 }
 
@@ -76,19 +79,23 @@ uint32_t Win32DiscDevice::GetSectorSize() {
   DWORD dwUnused;
 
   DISK_GEOMETRY dg;
-  if (DeviceIoControl(hDevice, IOCTL_CDROM_GET_DRIVE_GEOMETRY, NULL, 0,
+  if (DeviceIoControl(hDevice_, IOCTL_CDROM_GET_DRIVE_GEOMETRY, NULL, 0,
                       &dg, sizeof(dg), &dwUnused, NULL)) {
     return dg.BytesPerSector;
   }
 }
 
+size_t Win32DiscDevice::GetSize() {
+  return GetFileSize(hDevice_, NULL);
+}
+
 void Win32DiscDevice::Seek(uint64_t addr) {
-  SetFilePointer(hDevice, addr, NULL, FILE_BEGIN);
+  SetFilePointer(hDevice_, addr, NULL, FILE_BEGIN);
 }
 
 bool Win32DiscDevice::Read(uint8_t *buffer, size_t size) {
   DWORD dwUnused;
-  return ReadFile(hDevice, buffer, size, &dwUnused, NULL);
+  return ReadFile(hDevice_, buffer, size, &dwUnused, NULL);
 }
 
 }; // namespace xe
