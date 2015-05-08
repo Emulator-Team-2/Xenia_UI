@@ -283,6 +283,8 @@ SHIM_CALL XexGetProcedureAddress_shim(PPCContext* ppc_state,
       if (ptr) {
         SHIM_SET_MEM_32(out_function_ptr, ptr);
         result = X_STATUS_SUCCESS;
+      } else {
+        result = X_STATUS_UNSUCCESSFUL;
       }
     } else {
       // It's a name pointer instead.
@@ -293,6 +295,8 @@ SHIM_CALL XexGetProcedureAddress_shim(PPCContext* ppc_state,
       if (ptr) {
         SHIM_SET_MEM_32(out_function_ptr, ptr);
         result = X_STATUS_SUCCESS;
+      } else {
+        result = X_STATUS_UNSUCCESSFUL;
       }
     }
   }
