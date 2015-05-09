@@ -17,7 +17,7 @@
 namespace xe {
 namespace kernel {
 
-XObject::XObject(KernelState* kernel_state, Type type)
+XObject::XObject(KernelState* kernel_state, Type type, bool removable)
     : kernel_state_(kernel_state),
       handle_ref_count_(0),
       pointer_ref_count_(1),
@@ -25,7 +25,7 @@ XObject::XObject(KernelState* kernel_state, Type type)
       handle_(X_INVALID_HANDLE_VALUE) {
   // Added pointer check to support usage without a kernel_state
   if (kernel_state != nullptr) {
-    kernel_state->object_table()->AddHandle(this, &handle_);
+    kernel_state->object_table()->AddHandle(this, &handle_, removable);
   }
 }
 

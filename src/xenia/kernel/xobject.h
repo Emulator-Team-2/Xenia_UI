@@ -40,7 +40,7 @@ class XObject {
     kTypeEnumerator,
   };
 
-  XObject(KernelState* kernel_state, Type type);
+  XObject(KernelState* kernel_state, Type type, bool removable = true);
   virtual ~XObject();
 
   Emulator* emulator() const { return kernel_state_->emulator_; }
