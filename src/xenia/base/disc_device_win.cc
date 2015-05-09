@@ -60,7 +60,7 @@ std::unique_ptr<DiscDevice> DiscDevice::Open(const std::wstring& path) {
     return nullptr;
   }
 
-  auto dev = std::make_unique<Win32DiscDevice>();
+  auto dev = std::make_unique<Win32DiscDevice>(path);
   dev->hDevice_ = hDevice;
 
   return std::move(dev);

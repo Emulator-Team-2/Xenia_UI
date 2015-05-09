@@ -297,14 +297,6 @@ SHIM_CALL XexGetProcedureAddress_shim(PPCContext* ppc_state,
     }
   }
 
-  if (ordinal < 0x10000) {
-    XELOGD("%.8X = XexGetProcedureAddress(%.8X, %.8X, %.8X)", ptr,
-           module_handle, ordinal, out_function_ptr);
-  } else {
-    XELOGD("%.8X = XexGetProcedureAddress(%.8X, %.8X(%s), %.8X)", ptr,
-           module_handle, ordinal, name, out_function_ptr);
-  }
-
   if (module) {
     module->Release();
   }
