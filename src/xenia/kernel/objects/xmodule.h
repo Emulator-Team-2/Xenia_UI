@@ -20,7 +20,8 @@ namespace kernel {
 
 class XModule : public XObject {
  public:
-  XModule(KernelState* kernel_state, const std::string& path);
+  XModule(KernelState* kernel_state, const std::string& path,
+          bool kernelmodule = false);
   virtual ~XModule();
 
   const std::string& path() const { return path_; }

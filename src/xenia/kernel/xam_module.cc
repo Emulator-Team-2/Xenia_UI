@@ -17,7 +17,7 @@ namespace xe {
 namespace kernel {
 
 XamModule::XamModule(Emulator* emulator, KernelState* kernel_state)
-    : XKernelModule(kernel_state, "xe:\\xam.xex") {
+    : XKernelModule(kernel_state, "xe:\\xam.xex", "xam.xex") {
   RegisterExportTable(export_resolver_);
 
   // Register all exported functions.

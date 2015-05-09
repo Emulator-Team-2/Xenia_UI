@@ -20,7 +20,7 @@ class KernelState;
 
 class XKernelModule : public XModule {
  public:
-  XKernelModule(KernelState* kernel_state, const char* path);
+  XKernelModule(KernelState* kernel_state, const char* path, const char* name);
   ~XKernelModule() override;
 
   uint32_t GetProcAddressByOrdinal(uint16_t ordinal) override;
@@ -30,6 +30,7 @@ class XKernelModule : public XModule {
   Emulator* emulator_;
   Memory* memory_;
   xe::cpu::ExportResolver* export_resolver_;
+  std::string name_;
 };
 
 }  // namespace kernel

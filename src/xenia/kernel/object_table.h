@@ -19,6 +19,8 @@
 namespace xe {
 namespace kernel {
 
+#undef GetObject // windows...
+
 class XObject;
 
 class ObjectTable {
@@ -26,8 +28,9 @@ class ObjectTable {
   ObjectTable();
   ~ObjectTable();
 
-  X_STATUS AddHandle(XObject* object, X_HANDLE* out_handle);
-  X_STATUS RemoveHandle(X_HANDLE handle);
+  X_STATUS AddHandle(XObject* object, X_HANDLE* out_handle,
+                     bool removable = true);
+  X_STATUS RemoveHandle(X_HANDLE handle, bool force = false);
   X_STATUS GetObject(X_HANDLE handle, XObject** out_object,
                      bool already_locked = false);
 
@@ -39,7 +42,10 @@ class ObjectTable {
   X_HANDLE TranslateHandle(X_HANDLE handle);
   X_STATUS FindFreeSlot(uint32_t* out_slot);
 
-  typedef struct { XObject* object; } ObjectTableEntry;
+  typedef struct {
+    XObject* object;
+    bool removable; // Can this be removed by the guest?
+  } ObjectTableEntry;
 
   std::mutex table_mutex_;
   uint32_t table_capacity_;

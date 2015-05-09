@@ -82,7 +82,8 @@ X_STATUS ObjectTable::FindFreeSlot(uint32_t* out_slot) {
   return X_STATUS_SUCCESS;
 }
 
-X_STATUS ObjectTable::AddHandle(XObject* object, X_HANDLE* out_handle) {
+X_STATUS ObjectTable::AddHandle(XObject* object, X_HANDLE* out_handle,
+                                bool removable) {
   assert_not_null(out_handle);
 
   X_STATUS result = X_STATUS_SUCCESS;
@@ -98,6 +99,7 @@ X_STATUS ObjectTable::AddHandle(XObject* object, X_HANDLE* out_handle) {
     if (XSUCCEEDED(result)) {
       ObjectTableEntry& entry = table_[slot];
       entry.object = object;
+      entry.removable = removable;
 
       // Retain so long as the object is in the table.
       object->RetainHandle();
@@ -112,7 +114,7 @@ X_STATUS ObjectTable::AddHandle(XObject* object, X_HANDLE* out_handle) {
   return result;
 }
 
-X_STATUS ObjectTable::RemoveHandle(X_HANDLE handle) {
+X_STATUS ObjectTable::RemoveHandle(X_HANDLE handle, bool force) {
   X_STATUS result = X_STATUS_SUCCESS;
 
   handle = TranslateHandle(handle);
@@ -133,8 +135,13 @@ X_STATUS ObjectTable::RemoveHandle(X_HANDLE handle) {
     } else {
       ObjectTableEntry& entry = table_[slot];
       if (entry.object) {
-        // Release after we lose the lock.
-        object = entry.object;
+        // Check to see if user code can remove this handle.
+        if (entry.removable || force) {
+          // Release after we lose the lock.
+          object = entry.object;
+        } else {
+          result = X_STATUS_UNSUCCESSFUL;
+        }
       } else {
         result = X_STATUS_INVALID_HANDLE;
       }

@@ -25,7 +25,7 @@ namespace xe {
 namespace kernel {
 
 XboxkrnlModule::XboxkrnlModule(Emulator* emulator, KernelState* kernel_state)
-    : XKernelModule(kernel_state, "xe:\\xboxkrnl.exe"),
+    : XKernelModule(kernel_state, "xe:\\xboxkrnl.exe", "xboxkrnl.exe"),
       timestamp_timer_(nullptr) {
   RegisterExportTable(export_resolver_);
 
