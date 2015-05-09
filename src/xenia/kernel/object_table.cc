@@ -139,13 +139,13 @@ X_STATUS ObjectTable::RemoveHandle(X_HANDLE handle, bool force) {
         if (entry.removable || force) {
           // Release after we lose the lock.
           object = entry.object;
+          entry.object = nullptr;
         } else {
           result = X_STATUS_UNSUCCESSFUL;
         }
       } else {
         result = X_STATUS_INVALID_HANDLE;
       }
-      entry.object = nullptr;
     }
   }
 
