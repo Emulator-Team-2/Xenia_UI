@@ -154,8 +154,6 @@ SHIM_CALL XexGetModuleHandle_shim(PPCContext* ppc_state, KernelState* state) {
   const char* module_name = (const char*)SHIM_MEM_ADDR(module_name_ptr);
   uint32_t module_handle_ptr = SHIM_GET_ARG_32(1);
 
-  XELOGD("XexGetModuleHandle(%s, %.8X)", module_name, module_handle_ptr);
-
   XModule* module = nullptr;
   if (!module_name) {
     module = state->GetExecutableModule();
@@ -170,6 +168,8 @@ SHIM_CALL XexGetModuleHandle_shim(PPCContext* ppc_state, KernelState* state) {
 
   // NOTE: we don't retain the handle for return.
   SHIM_SET_MEM_32(module_handle_ptr, module->handle());
+
+  XELOGD("%.8X = XexGetModuleHandle(%s, %.8X)", module->handle(), module_name, module_handle_ptr);
 
   module->Release();
 
@@ -256,14 +256,6 @@ SHIM_CALL XexGetProcedureAddress_shim(PPCContext* ppc_state,
   const char* name = (const char*)SHIM_MEM_ADDR(ordinal);
   uint32_t out_function_ptr = SHIM_GET_ARG_32(2);
 
-  if (ordinal < 0x10000) {
-    XELOGD("XexGetProcedureAddress(%.8X, %.8X, %.8X)", module_handle, ordinal,
-           out_function_ptr);
-  } else {
-    XELOGD("XexGetProcedureAddress(%.8X, %.8X(%s), %.8X)", module_handle,
-           ordinal, name, out_function_ptr);
-  }
-
   X_STATUS result = X_STATUS_INVALID_HANDLE;
   SHIM_SET_MEM_32(out_function_ptr, 0xDEADF00D);
 
@@ -276,29 +268,33 @@ SHIM_CALL XexGetProcedureAddress_shim(PPCContext* ppc_state,
         state->object_table()->GetObject(module_handle, (XObject**)&module);
   }
 
+  uint32_t ptr = 0;
+
   if (XSUCCEEDED(result)) {
     if (ordinal < 0x10000) {
       // Ordinal.
-      uint32_t ptr = module->GetProcAddressByOrdinal(ordinal);
-      if (ptr) {
-        SHIM_SET_MEM_32(out_function_ptr, ptr);
-        result = X_STATUS_SUCCESS;
-      } else {
-        result = X_STATUS_UNSUCCESSFUL;
-      }
+      ptr = module->GetProcAddressByOrdinal(ordinal);
     } else {
       // It's a name pointer instead.
-      uint32_t ptr = module->GetProcAddressByName(name);
-
-      // FYI: We don't need to generate this function now. It'll
-      // be done automatically by xenia when it gets called.
-      if (ptr) {
-        SHIM_SET_MEM_32(out_function_ptr, ptr);
-        result = X_STATUS_SUCCESS;
-      } else {
-        result = X_STATUS_UNSUCCESSFUL;
-      }
+      ptr = module->GetProcAddressByName(name);
     }
+  }
+
+  // FYI: We don't need to generate this function now. It'll
+  // be done automatically by xenia when it gets called.
+  if (ptr) {
+    SHIM_SET_MEM_32(out_function_ptr, ptr);
+    result = X_STATUS_SUCCESS;
+  } else {
+    result = X_STATUS_UNSUCCESSFUL;
+  }
+
+  if (ordinal < 0x10000) {
+    XELOGD("%.8X = XexGetProcedureAddress(%.8X, %.8X, %.8X)", ptr,
+           module_handle, ordinal, out_function_ptr);
+  } else {
+    XELOGD("%.8X = XexGetProcedureAddress(%.8X, %.8X(%s), %.8X)", ptr,
+           module_handle, ordinal, name, out_function_ptr);
   }
 
   if (module) {
