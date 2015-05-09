@@ -26,8 +26,8 @@ class Win32DiscDevice : public DiscDevice {
   public:
     Win32DiscDevice(const std::wstring& path) : DiscDevice(path) {}
     ~Win32DiscDevice() override {
-      if (hDevice != INVALID_HANDLE_VALUE) {
-        CloseHandle(hDevice);
+      if (hDevice_ != INVALID_HANDLE_VALUE) {
+        CloseHandle(hDevice_);
       }
     }
 
