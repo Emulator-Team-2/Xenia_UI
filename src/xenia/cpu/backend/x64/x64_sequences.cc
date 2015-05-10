@@ -3070,7 +3070,7 @@ EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
     // dest hi, dest low = src * edx
 
     // TODO(justin): Find a way to shorten this has call
-    if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3087,7 +3087,7 @@ EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
       }
     } else {
       // x86 mul instruction
-      // EDX:EAX <- EAX * $1;
+      // EDX:EAX = EAX * $1;
       //e.DebugBreak();
 
       if (i.src1.is_constant) {
@@ -3116,7 +3116,7 @@ EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     // dest hi, dest low = src * edx
 
-    if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3133,7 +3133,7 @@ EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
       }
     } else {
       // x86 mul instruction
-      // EDX:EAX <- EAX * REG;
+      // DX:AX = AX * $1;
       //e.DebugBreak();
 
       if (i.src1.is_constant) {
@@ -3163,7 +3163,7 @@ EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
     // dest hi, dest low = src * edx
     // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
 
-    if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3180,7 +3180,7 @@ EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
       }
     } else {
       // x86 mul instruction
-      // EDX:EAX < EAX * REG(op1);
+      // EDX:EAX = EAX * $1;
       //e.DebugBreak();
 
       // is_constant AKA not a register
@@ -3210,7 +3210,7 @@ EMITTER(MUL_I64, MATCH(I<OPCODE_MUL, I64<>, I64<>, I64<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     // dest hi, dest low = src * rdx
 
-    if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
       // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
 
       // TODO(benvanik): place src2 in edx?
@@ -3229,7 +3229,7 @@ EMITTER(MUL_I64, MATCH(I<OPCODE_MUL, I64<>, I64<>, I64<>>)) {
       }
     } else {
       // x86 mul instruction
-      // EDX:EAX < EAX * REG(op1);
+      // RDX:RAX = EAX * $1;
       //e.DebugBreak();
 
       if (i.src1.is_constant) {
@@ -3302,7 +3302,7 @@ EMITTER(MUL_HI_I8, MATCH(I<OPCODE_MUL_HI, I8<>, I8<>, I8<>>)) {
 
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
       // TODO(justin): Find a way to shorten this has call
-      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+      if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.movzx(e.edx, i.src1);
         e.mulx(i.dest.reg().cvt32(), e.eax, i.src2.reg().cvt32());
@@ -3346,7 +3346,7 @@ EMITTER(MUL_HI_I16, MATCH(I<OPCODE_MUL_HI, I16<>, I16<>, I16<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
       // TODO(justin): Find a way to shorten this has call
-      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+      if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.movzx(e.edx, i.src1);
         e.mulx(i.dest.reg().cvt32(), e.eax, i.src2.reg().cvt32());
@@ -3390,7 +3390,7 @@ EMITTER(MUL_HI_I32, MATCH(I<OPCODE_MUL_HI, I32<>, I32<>, I32<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
       // TODO(justin): Find a way to shorten this has call
-      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+      if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.mov(e.edx, i.src1);
         if (i.src2.is_constant) {
@@ -3439,7 +3439,7 @@ EMITTER(MUL_HI_I64, MATCH(I<OPCODE_MUL_HI, I64<>, I64<>, I64<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
       // TODO(justin): Find a way to shorten this has call
-      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+      if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.mov(e.rdx, i.src1);
         if (i.src2.is_constant) {
@@ -4458,7 +4458,7 @@ void EmitShlXX(X64Emitter& e, const ARGS& i) {
         [](X64Emitter& e, const REG& dest_src, const Reg8& src) {
           // shlx: $1 = $2 << $3
           // shl: $1 = $1 << $2
-          if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+          if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
             if (dest_src.getBit() == 64) {
               e.shlx(dest_src.cvt64(), dest_src.cvt64(), src.cvt64());
             } else {
@@ -4512,7 +4512,7 @@ void EmitShrXX(X64Emitter& e, const ARGS& i) {
         [](X64Emitter& e, const REG& dest_src, const Reg8& src) {
           // shrx: op1 dest, op2 src, op3 count
           // shr: op1 src/dest, op2 count
-          if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+          if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
             if (dest_src.getBit() == 64) {
               e.shrx(dest_src.cvt64(), dest_src.cvt64(), src.cvt64());
             } else if (dest_src.getBit() == 32) {
@@ -5297,25 +5297,27 @@ EMITTER(CNTLZ_I8, MATCH(I<OPCODE_CNTLZ, I8<>, I8<>>)) {
       e.lzcnt(i.dest.reg().cvt16(), i.dest.reg().cvt16());
       e.sub(i.dest, 8);
     } else {
+      Xbyak::Label jz, jend;
+
       e.inLocalLabel();
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
       e.bsr(i.dest, i.src1);
-      e.jz(".la"); // Jump if zero
+      e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
-      // sub 7 from e.eax
+      // Invert the result (7 - i.dest)
       e.mov(e.eax, 7);
       e.sub(e.eax, i.dest);
       e.mov(i.dest, e.eax);
-      e.jmp(".lb"); // Jmp to end
+      e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 8 to the dest reg
-      e.L(".la");
+      e.L(jz);
       e.mov(i.dest, 8);
 
-      e.L(".lb");
+      e.L(jend);
       e.outLocalLabel();
     }
   }
@@ -5326,25 +5328,27 @@ EMITTER(CNTLZ_I16, MATCH(I<OPCODE_CNTLZ, I8<>, I16<>>)) {
       // LZCNT: searches $2 until MSB 1 found, stores idx (from last bit) in $1
       e.lzcnt(i.dest.reg().cvt32(), i.src1);
     } else {
+      Xbyak::Label jz, jend;
+
       e.inLocalLabel();
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
       e.bsr(i.dest, i.src1);
-      e.jz(".la"); // Jump if zero
+      e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
-      // sub 15 from e.eax
+      // Invert the result (15 - i.dest)
       e.mov(e.eax, 15);
       e.sub(e.eax, i.dest);
       e.mov(i.dest, e.eax);
-      e.jmp(".lb"); // Jmp to end
+      e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 16 to the dest reg
-      e.L(".la");
+      e.L(jz);
       e.mov(i.dest, 16);
 
-      e.L(".lb");
+      e.L(jend);
       e.outLocalLabel();
     }
   }
@@ -5354,25 +5358,27 @@ EMITTER(CNTLZ_I32, MATCH(I<OPCODE_CNTLZ, I8<>, I32<>>)) {
     if (e.cpu()->has(Xbyak::util::Cpu::tLZCNT)) {
       e.lzcnt(i.dest.reg().cvt32(), i.src1);
     } else {
+      Xbyak::Label jz, jend;
+
       e.inLocalLabel();
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
-      e.bsr(i.dest, i.src1);
-      e.jz(".la"); // Jump if zero
+      e.bsr(i.dest.reg().cvt32(), i.src1);
+      e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
-      // sub 31 from e.eax
+      // Invert the result (31 - i.dest)
       e.mov(e.eax, 31);
-      e.sub(e.eax, i.dest);
-      e.mov(i.dest, e.eax);
-      e.jmp(".lb"); // Jmp to end
+      e.sub(e.eax, i.dest.reg().cvt32());
+      e.mov(i.dest.reg().cvt32(), e.eax);
+      e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 32 to the dest reg
-      e.L(".la");
-      e.mov(i.dest, 32);
+      e.L(jz);
+      e.mov(i.dest.reg().cvt32(), 32);
 
-      e.L(".lb");
+      e.L(jend);
       e.outLocalLabel();
     }
   }
@@ -5382,25 +5388,27 @@ EMITTER(CNTLZ_I64, MATCH(I<OPCODE_CNTLZ, I8<>, I64<>>)) {
     if (e.cpu()->has(Xbyak::util::Cpu::tLZCNT)) {
       e.lzcnt(i.dest.reg().cvt64(), i.src1);
     } else {
+      Xbyak::Label jz, jend;
+
       e.inLocalLabel();
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
-      e.bsr(i.dest, i.src1);
-      e.jz(".la"); // Jump if zero
+      e.bsr(i.dest.reg().cvt64(), i.src1);
+      e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
-      // sub 63 from e.rax
+      // Invert the result (63 - i.dest)
       e.mov(e.rax, 63);
-      e.sub(e.rax, i.dest);
-      e.mov(i.dest, e.rax);
-      e.jmp(".lb"); // Jmp to end
+      e.sub(e.rax, i.dest.reg().cvt64());
+      e.mov(i.dest.reg().cvt64(), e.rax);
+      e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 64 to the dest reg
-      e.L(".la");
-      e.mov(i.dest, 64);
+      e.L(jz);
+      e.mov(i.dest.reg().cvt64(), 64);
 
-      e.L(".lb");
+      e.L(jend);
       e.outLocalLabel();
     }
   }
@@ -6408,11 +6416,11 @@ void RegisterSequences() {
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ADD);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SUB);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SUB);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_HI);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL); // repl no
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_HI); // repl no
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_DIV);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_ADD);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_SUB);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_ADD); // repl no
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_SUB); // repl no
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_NEG);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_ABS);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SQRT);
@@ -6425,21 +6433,21 @@ void RegisterSequences() {
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_OR);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_XOR);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_NOT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHL);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHR);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHA);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHL);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHR);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHA);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHL); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHR); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHA); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHL); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHR); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHA); // repl
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_ROTATE_LEFT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ROTATE_LEFT);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ROTATE_LEFT); // repl
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_AVERAGE);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_BYTE_SWAP);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_CNTLZ);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_CNTLZ); // repl
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_INSERT);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_EXTRACT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SPLAT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PERMUTE);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SPLAT); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PERMUTE); // repl
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SWIZZLE);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PACK);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_UNPACK);
