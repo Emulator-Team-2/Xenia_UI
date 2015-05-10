@@ -3067,10 +3067,9 @@ EMITTER_OPCODE_TABLE(
 // We exploit mulx here to avoid creating too much register pressure.
 EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    // dest hi, dest low = src * edx
-
-    // TODO(justin): Find a way to shorten this has call
     if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+      // mulx: $1:$2 = EDX * $3
+
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3087,25 +3086,24 @@ EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
       }
     } else {
       // x86 mul instruction
-      // EDX:EAX = EAX * $1;
-      //e.DebugBreak();
+      // AX = AL * $1;
 
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
 
-        e.mov(e.eax, i.src1);
+        e.mov(e.al, i.src1.constant());
         e.mul(i.src2);
-        e.mov(i.dest, e.eax);
+        e.mov(i.dest, e.ax);
       } else if (i.src2.is_constant) {
         assert_true(!i.src1.is_constant);
 
-        e.mov(e.eax, i.src2);
+        e.mov(e.al, i.src2.constant());
         e.mul(i.src1);
-        e.mov(i.dest, e.eax);
+        e.mov(i.dest, e.ax);
       } else {
-        e.movzx(e.eax, i.src1);
+        e.movzx(e.al, i.src1);
         e.mul(i.src2);
-        e.mov(i.dest, e.eax);
+        e.mov(i.dest, e.ax);
       }
     }
 
@@ -3114,9 +3112,9 @@ EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
 };
 EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    // dest hi, dest low = src * edx
-
     if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+      // mulx: $1:$2 = EDX * $3
+
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3134,24 +3132,23 @@ EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
     } else {
       // x86 mul instruction
       // DX:AX = AX * $1;
-      //e.DebugBreak();
 
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
 
-        e.mov(e.eax, i.src1.constant());
+        e.mov(e.ax, i.src1.constant());
         e.mul(i.src2);
-        e.mov(i.dest, e.eax);
+        e.movzx(i.dest, e.ax);
       } else if (i.src2.is_constant) {
         assert_true(!i.src1.is_constant);
 
-        e.mov(e.eax, i.src2.constant());
+        e.mov(e.ax, i.src2.constant());
         e.mul(i.src1);
-        e.mov(i.dest, e.eax);
+        e.movzx(i.dest, e.ax);
       } else {
-        e.movzx(e.eax, i.src1);
+        e.movzx(e.ax, i.src1);
         e.mul(i.src2);
-        e.mov(i.dest, e.eax);
+        e.movzx(i.dest, e.ax);
       }
     }
 
@@ -3160,10 +3157,9 @@ EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
 };
 EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    // dest hi, dest low = src * edx
-    // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
-
     if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+      // mulx: $1:$2 = EDX * $3
+
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3181,7 +3177,6 @@ EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
     } else {
       // x86 mul instruction
       // EDX:EAX = EAX * $1;
-      //e.DebugBreak();
 
       // is_constant AKA not a register
       if (i.src1.is_constant) {
@@ -3208,12 +3203,9 @@ EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
 };
 EMITTER(MUL_I64, MATCH(I<OPCODE_MUL, I64<>, I64<>, I64<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    // dest hi, dest low = src * rdx
-
     if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
-      // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
+      // mulx: $1:$2 = RDX * $3
 
-      // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
         e.mov(e.rdx, i.src2);
@@ -3229,8 +3221,7 @@ EMITTER(MUL_I64, MATCH(I<OPCODE_MUL, I64<>, I64<>, I64<>>)) {
       }
     } else {
       // x86 mul instruction
-      // RDX:RAX = EAX * $1;
-      //e.DebugBreak();
+      // RDX:RAX = RAX * $1;
 
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant); // can't multiply 2 constants
@@ -3297,36 +3288,38 @@ EMITTER_OPCODE_TABLE(
 // ============================================================================
 EMITTER(MUL_HI_I8, MATCH(I<OPCODE_MUL_HI, I8<>, I8<>, I8<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    // dest hi, dest low = src * rdx
-    // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
-
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
-      // TODO(justin): Find a way to shorten this has call
       if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+        // mulx: $1:$2 = EDX * $3
+
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.movzx(e.edx, i.src1);
         e.mulx(i.dest.reg().cvt32(), e.eax, i.src2.reg().cvt32());
       } else {
         // x86 mul instruction
-        // EDX:EAX < EAX * REG(op1);
+        // AX = AL * $1;
+
+        // FIXME: This (specific) instruction doesn't actually support
+        // the high bits
+        assert_always();
 
         // is_constant AKA not a register
         if (i.src1.is_constant) {
           assert_true(!i.src2.is_constant); // can't multiply 2 constants
 
-          e.mov(e.eax, i.src1.constant());
+          e.mov(e.al, i.src1.constant());
           e.mul(i.src2);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.ax);
         } else if (i.src2.is_constant) {
           assert_true(!i.src1.is_constant); // can't multiply 2 constants
 
-          e.mov(e.eax, i.src2.constant());
+          e.mov(e.al, i.src2.constant());
           e.mul(i.src1);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.ax);
         } else {
-          e.movzx(e.eax, i.src1);
+          e.mov(e.al, i.src1);
           e.mul(i.src2);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.ax);
         }
       }
     } else {
@@ -3345,32 +3338,32 @@ EMITTER(MUL_HI_I8, MATCH(I<OPCODE_MUL_HI, I8<>, I8<>, I8<>>)) {
 EMITTER(MUL_HI_I16, MATCH(I<OPCODE_MUL_HI, I16<>, I16<>, I16<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
-      // TODO(justin): Find a way to shorten this has call
       if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
-        // TODO(benvanik): place src1 in eax? still need to sign extend
+        // mulx: $1:$2 = EDX * $3
+
         e.movzx(e.edx, i.src1);
         e.mulx(i.dest.reg().cvt32(), e.eax, i.src2.reg().cvt32());
       } else {
         // x86 mul instruction
-        // EDX:EAX < EAX * REG(op1);
+        // DX:AX = AX * $1;
 
         // is_constant AKA not a register
         if (i.src1.is_constant) {
           assert_true(!i.src2.is_constant); // can't multiply 2 constants
 
-          e.mov(e.eax, i.src1.constant());
+          e.mov(e.ax, i.src1.constant());
           e.mul(i.src2);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.dx);
         } else if (i.src2.is_constant) {
           assert_true(!i.src1.is_constant); // can't multiply 2 constants
 
-          e.mov(e.eax, i.src2.constant());
+          e.mov(e.ax, i.src2.constant());
           e.mul(i.src1);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.dx);
         } else {
-          e.movzx(e.eax, i.src1);
+          e.mov(e.ax, i.src1);
           e.mul(i.src2);
-          e.mov(i.dest, e.edx);
+          e.mov(i.dest, e.dx);
         }
       }
     } else {
@@ -3389,8 +3382,9 @@ EMITTER(MUL_HI_I16, MATCH(I<OPCODE_MUL_HI, I16<>, I16<>, I16<>>)) {
 EMITTER(MUL_HI_I32, MATCH(I<OPCODE_MUL_HI, I32<>, I32<>, I32<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
-      // TODO(justin): Find a way to shorten this has call
       if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+        // mulx: $1:$2 = EDX * $3
+
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.mov(e.edx, i.src1);
         if (i.src2.is_constant) {
@@ -3401,7 +3395,7 @@ EMITTER(MUL_HI_I32, MATCH(I<OPCODE_MUL_HI, I32<>, I32<>, I32<>>)) {
         }
       } else {
         // x86 mul instruction
-        // EDX:EAX < EAX * REG(op1);
+        // EDX:EAX = EAX * $1;
 
         // is_constant AKA not a register
         if (i.src1.is_constant) {
@@ -3438,8 +3432,9 @@ EMITTER(MUL_HI_I32, MATCH(I<OPCODE_MUL_HI, I32<>, I32<>, I32<>>)) {
 EMITTER(MUL_HI_I64, MATCH(I<OPCODE_MUL_HI, I64<>, I64<>, I64<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
-      // TODO(justin): Find a way to shorten this has call
       if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+        // mulx: $1:$2 = RDX * $3
+
         // TODO(benvanik): place src1 in eax? still need to sign extend
         e.mov(e.rdx, i.src1);
         if (i.src2.is_constant) {
@@ -3450,7 +3445,7 @@ EMITTER(MUL_HI_I64, MATCH(I<OPCODE_MUL_HI, I64<>, I64<>, I64<>>)) {
         }
       } else {
         // x86 mul instruction
-        // EDX:EAX < EAX * REG(op1);
+        // RDX:RAX < RAX * REG(op1);
 
         // is_constant AKA not a register
         if (i.src1.is_constant) {
