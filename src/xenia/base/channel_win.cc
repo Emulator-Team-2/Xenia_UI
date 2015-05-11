@@ -52,6 +52,12 @@ Win32ChannelPipe::Win32ChannelPipe(const std::wstring& name)
                     2048, 2048, 0, NULL);
 }
 
+Win32ChannelPipe::~Win32ChannelPipe() {
+  if (hPipe_ != INVALID_HANDLE_VALUE) {
+    CloseHandle(hPipe_);
+  }
+}
+
 void Win32ChannelPipe::SetBlocking(bool blocking) {
   DWORD dwMode = PIPE_READMODE_MESSAGE | (blocking ? PIPE_NOWAIT : 0);
   SetNamedPipeHandleState(hPipe_, &dwMode, NULL, NULL);
