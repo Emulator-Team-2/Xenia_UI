@@ -18,27 +18,25 @@
 #include "xenia/xbox.h"
 
 namespace xe {
-namespace apu {
-class AudioSystem;
-}  // namespace apu
-namespace cpu {
-class ExportResolver;
-class Processor;
-class ThreadState;
-}  // namespace cpu
-namespace gpu {
-class GraphicsSystem;
-}  // namespace gpu
-namespace hid {
-class InputSystem;
-}  // namespace hid
-namespace kernel {
-class XamModule;
-class XboxkrnlModule;
-}  // namespace kernel
-namespace ui {
-class MainWindow;
-}  // namespace ui
+
+  // Forward declarations
+  namespace apu { class AudioSystem; }
+  namespace debug { class DebugServer; }
+  namespace gpu { class GraphicsSystem; }
+  namespace hid { class InputSystem; }
+  namespace ui { class MainWindow; }
+
+  namespace cpu {
+    class ExportResolver;
+    class Processor;
+    class ThreadState;
+  }
+
+  namespace kernel {
+    class XamModule;
+    class XboxkrnlModule;
+  }
+
 }  // namespace xe
 
 namespace xe {
@@ -69,6 +67,8 @@ class Emulator {
   kernel::XboxkrnlModule* xboxkrnl() const { return xboxkrnl_.get(); }
   kernel::XamModule* xam() const { return xam_.get(); }
 
+  debug::DebugServer* debug_server() const { return debug_server_.get(); }
+
   X_STATUS Setup();
 
   // TODO(benvanik): raw binary.
@@ -97,6 +97,8 @@ class Emulator {
   std::unique_ptr<kernel::KernelState> kernel_state_;
   std::unique_ptr<kernel::XamModule> xam_;
   std::unique_ptr<kernel::XboxkrnlModule> xboxkrnl_;
+
+  std::unique_ptr<debug::DebugServer> debug_server_;
 };
 
 }  // namespace xe

@@ -13,6 +13,7 @@
 #include "xenia/base/assert.h"
 #include "xenia/base/string.h"
 #include "xenia/cpu/cpu.h"
+#include "xenia/debug/debug_server.h"
 #include "xenia/gpu/gpu.h"
 #include "xenia/hid/hid.h"
 #include "xenia/kernel/kernel.h"
@@ -26,6 +27,7 @@ namespace xe {
 
 using namespace xe::apu;
 using namespace xe::cpu;
+using namespace xe::debug;
 using namespace xe::gpu;
 using namespace xe::hid;
 using namespace xe::kernel;
@@ -37,6 +39,10 @@ Emulator::Emulator(const std::wstring& command_line)
 
 Emulator::~Emulator() {
   // Note that we delete things in the reverse order they were initialized.
+
+  // Allow the debug server to notify clients we're shutting down.
+  debug_server_->Shutdown();
+  debug_server_.reset();
 
   xam_.reset();
   xboxkrnl_.reset();
@@ -126,6 +132,9 @@ X_STATUS Emulator::Setup() {
   // HLE kernel modules.
   xboxkrnl_ = std::make_unique<XboxkrnlModule>(this, kernel_state_.get());
   xam_ = std::make_unique<XamModule>(this, kernel_state_.get());
+
+  // Debugging server.
+  debug_server_ = std::make_unique<DebugServer>(this);
 
   return result;
 }

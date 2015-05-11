@@ -12,7 +12,17 @@
 namespace xe {
 namespace debug {
 
-//
+DebugServer::DebugServer(Emulator* emulator): emulator_(emulator) {
+
+}
+
+DebugServer::~DebugServer() {
+
+}
+
+void DebugServer::Shutdown() {
+
+}
 
 }  // namespace debug
 }  // namespace xe

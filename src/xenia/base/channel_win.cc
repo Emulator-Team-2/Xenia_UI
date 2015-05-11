@@ -26,7 +26,7 @@ namespace base {
 class Win32ChannelPipe : public Channel {
   public:
     Win32ChannelPipe(const std::wstring &name);
-    virtual ~Win32ChannelPipe() = default;
+    virtual ~Win32ChannelPipe();
 
     virtual void SetBlocking(bool blocking);
 
