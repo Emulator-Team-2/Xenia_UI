@@ -67,10 +67,10 @@ void Win32ChannelPipe::SetBlocking(bool blocking) {
 
 int Win32ChannelPipe::Read(uint8_t* buffer, uint32_t bufSize) {
   DWORD dwNumBytesRead;
-  int ret = ReadFile(hPipe_, buffer, bufSize, &dwNumBytesRead, NULL);
+  BOOL ret = ReadFile(hPipe_, buffer, bufSize, &dwNumBytesRead, NULL);
   // Send an error back to the caller as a negative number
-  if (ret) {
-    return ret > 0 ? -ret : ret;
+  if (!ret) {
+    return -1;
   }
 
   return dwNumBytesRead;
@@ -78,10 +78,10 @@ int Win32ChannelPipe::Read(uint8_t* buffer, uint32_t bufSize) {
 
 int Win32ChannelPipe::Write(uint8_t* buffer, uint32_t numBytes) {
   DWORD dwNumBytesWritten;
-  int ret = WriteFile(hPipe_, buffer, numBytes, &dwNumBytesWritten, NULL);
+  BOOL ret = WriteFile(hPipe_, buffer, numBytes, &dwNumBytesWritten, NULL);
   // Send an error back to the caller as a negative number
-  if (ret) {
-    return ret > 0 ? -ret : ret;
+  if (!ret) {
+    return -1;
   }
 
   return dwNumBytesWritten;
