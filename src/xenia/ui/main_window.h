@@ -15,6 +15,7 @@
 
 // TODO(benvanik): only on windows.
 #include "xenia/ui/win32/win32_loop.h"
+#include "xenia/ui/win32/win32_menu_item.h"
 #include "xenia/ui/win32/win32_window.h"
 #include "xenia/ui/win32/win32_menu_item.h"
 
