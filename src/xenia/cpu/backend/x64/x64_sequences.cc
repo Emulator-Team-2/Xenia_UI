@@ -3067,10 +3067,9 @@ EMITTER_OPCODE_TABLE(
 // We exploit mulx here to avoid creating too much register pressure.
 EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // mulx: $1:$2 = EDX * $3
 
-    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3111,10 +3110,9 @@ EMITTER(MUL_I8, MATCH(I<OPCODE_MUL, I8<>, I8<>, I8<>>)) {
 };
 EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // mulx: $1:$2 = EDX * $3
 
-    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3155,10 +3153,9 @@ EMITTER(MUL_I16, MATCH(I<OPCODE_MUL, I16<>, I16<>, I16<>>)) {
 };
 EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
+    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // mulx: $1:$2 = EDX * $3
 
-    if (e.IsFeatureEnabled(kX64EmitBMI2)) {
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
         assert_true(!i.src2.is_constant);
@@ -3200,11 +3197,8 @@ EMITTER(MUL_I32, MATCH(I<OPCODE_MUL, I32<>, I32<>, I32<>>)) {
 };
 EMITTER(MUL_I64, MATCH(I<OPCODE_MUL, I64<>, I64<>, I64<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
-    if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
-      // mulx: $1:$2 = RDX * $3
-
     if (e.IsFeatureEnabled(kX64EmitBMI2)) {
-      // mulx: edx src, 1st op high half, 2nd op low half, 3rd op src2
+      // mulx: $1:$2 = RDX * $3
 
       // TODO(benvanik): place src2 in edx?
       if (i.src1.is_constant) {
@@ -3288,10 +3282,8 @@ EMITTER_OPCODE_TABLE(
 EMITTER(MUL_HI_I8, MATCH(I<OPCODE_MUL_HI, I8<>, I8<>, I8<>>)) {
   static void Emit(X64Emitter& e, const EmitArgType& i) {
     if (i.instr->flags & ARITHMETIC_UNSIGNED) {
-      if (e.cpu()->has(Xbyak::util::Cpu::tBMI2)) {
-        // mulx: $1:$2 = EDX * $3
+      // mulx: $1:$2 = EDX * $3
 
-    if (i.instr->flags & ARITHMETIC_UNSIGNED) {
       // TODO(justin): Find a way to shorten this has call
       if (e.IsFeatureEnabled(kX64EmitBMI2)) {
         // TODO(benvanik): place src1 in eax? still need to sign extend
@@ -4715,13 +4707,10 @@ EMITTER(VECTOR_SHL_V128, MATCH(I<OPCODE_VECTOR_SHL, V128<>, V128<>, V128<>>)) {
             break;
           }
         }
-      }
-      if (all_same) {
-        // Every count is the same, so we can use vpslld.
-        e.vpslld(i.dest, i.src1, shamt.u8[0] & 0x1F);
-        return;
-      } else {
-        if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+        if (all_same) {
+          // Every count is the same, so we can use vpslld.
+          e.vpslld(i.dest, i.src1, shamt.u8[0] & 0x1F);
+        } else {
           // Counts differ, so pre-mask and load constant.
           vec128_t masked = i.src2.constant();
           for (size_t n = 0; n < 4; ++n) {
@@ -4729,30 +4718,26 @@ EMITTER(VECTOR_SHL_V128, MATCH(I<OPCODE_VECTOR_SHL, V128<>, V128<>, V128<>>)) {
           }
           e.LoadConstantXmm(e.xmm0, masked);
           e.vpsllvd(i.dest, i.src1, e.xmm0);
-          return;
         }
-      }
-    } else {
-      if (e.cpu()->has(Xbyak::util::Cpu::tAVX2)) {
+      } else {
         // Fully variable shift.
         // src shift mask may have values >31, and x86 sets to zero when
         // that happens so we mask.
         e.vandps(e.xmm0, i.src2, e.GetXmmConstPtr(XMMShiftMaskPS));
         e.vpsllvd(i.dest, i.src1, e.xmm0);
-        return;
       }
-    }
-
-    // TODO(benvanik): native version (with shift magic).
-    if (i.src2.is_constant) {
-      e.LoadConstantXmm(e.xmm0, i.src2.constant());
-      e.lea(e.r9, e.StashXmm(1, e.xmm0));
     } else {
-      e.lea(e.r9, e.StashXmm(1, i.src2));
+      // TODO(benvanik): native version (with shift magic).
+      if (i.src2.is_constant) {
+        e.LoadConstantXmm(e.xmm0, i.src2.constant());
+        e.lea(e.r9, e.StashXmm(1, e.xmm0));
+      } else {
+        e.lea(e.r9, e.StashXmm(1, i.src2));
+      }
+      e.lea(e.r8, e.StashXmm(0, i.src1));
+      e.CallNativeSafe(reinterpret_cast<void*>(EmulateVectorShlI32));
+      e.vmovaps(i.dest, e.xmm0);
     }
-    e.lea(e.r8, e.StashXmm(0, i.src1));
-    e.CallNativeSafe(reinterpret_cast<void*>(EmulateVectorShlI32));
-    e.vmovaps(i.dest, e.xmm0);
   }
 };
 EMITTER_OPCODE_TABLE(
@@ -5341,19 +5326,19 @@ EMITTER(CNTLZ_I32, MATCH(I<OPCODE_CNTLZ, I8<>, I32<>>)) {
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
-      e.bsr(i.dest.reg().cvt32(), i.src1);
+      e.bsr(i.dest, i.src1);
       e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
       // Invert the result (31 - i.dest)
       e.mov(e.eax, 31);
-      e.sub(e.eax, i.dest.reg().cvt32());
-      e.mov(i.dest.reg().cvt32(), e.eax);
+      e.sub(e.eax, i.dest);
+      e.mov(i.dest, e.eax);
       e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 32 to the dest reg
       e.L(jz);
-      e.mov(i.dest.reg().cvt32(), 32);
+      e.mov(i.dest, 32);
 
       e.L(jend);
       e.outLocalLabel();
@@ -5371,19 +5356,19 @@ EMITTER(CNTLZ_I64, MATCH(I<OPCODE_CNTLZ, I8<>, I64<>>)) {
 
       // BSR: searches $2 until MSB 1 found, stores idx (from bit 0) in $1
       // if input is 0, results are undefined (and ZF is set)
-      e.bsr(i.dest.reg().cvt64(), i.src1);
+      e.bsr(i.dest, i.src1);
       e.jz(jz); // Jump if zero
 
       // sub: $1 = $1 - $2
       // Invert the result (63 - i.dest)
       e.mov(e.rax, 63);
-      e.sub(e.rax, i.dest.reg().cvt64());
-      e.mov(i.dest.reg().cvt64(), e.rax);
+      e.sub(e.rax, i.dest);
+      e.mov(i.dest, e.rax);
       e.jmp(jend); // Jmp to end
 
       // src1 was zero, so write 64 to the dest reg
       e.L(jz);
-      e.mov(i.dest.reg().cvt64(), 64);
+      e.mov(i.dest, 64);
 
       e.L(jend);
       e.outLocalLabel();
@@ -6393,11 +6378,11 @@ void RegisterSequences() {
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ADD);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SUB);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SUB);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL); // repl no
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_HI); // repl no
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_HI);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_DIV);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_ADD); // repl no
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_SUB); // repl no
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_ADD);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_MUL_SUB);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_NEG);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_ABS);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SQRT);
@@ -6410,21 +6395,21 @@ void RegisterSequences() {
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_OR);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_XOR);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_NOT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHL); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHR); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHA); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHL); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHR); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHA); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHL);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHR);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SHA);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHL);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHR);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_SHA);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_ROTATE_LEFT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ROTATE_LEFT); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_ROTATE_LEFT);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_VECTOR_AVERAGE);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_BYTE_SWAP);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_CNTLZ); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_CNTLZ);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_INSERT);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_EXTRACT);
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SPLAT); // repl
-  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PERMUTE); // repl
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SPLAT);
+  REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PERMUTE);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_SWIZZLE);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_PACK);
   REGISTER_EMITTER_OPCODE_TABLE(OPCODE_UNPACK);
