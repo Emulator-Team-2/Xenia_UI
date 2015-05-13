@@ -78,10 +78,20 @@ SHIM_CALL VdGetCurrentDisplayInformation_shim(PPCContext* ppc_state,
   SHIM_SET_MEM_32(ptr + 84, 1280);  // display width
 }
 
+void xeVdQueryVideoMode(X_VIDEO_MODE* video_mode);
+
 SHIM_CALL VdQueryVideoFlags_shim(PPCContext* ppc_state, KernelState* state) {
   XELOGD("VdQueryVideoFlags()");
 
-  SHIM_SET_RETURN_64(0x00000006);
+  X_VIDEO_MODE mode;
+  xeVdQueryVideoMode(&mode);
+
+  uint32_t flags = 0;
+  flags |= mode.is_widescreen ? 1 : 0;
+  flags |= mode.display_width >= 1024 ? 2 : 0;
+  flags |= mode.display_width >= 1920 ? 4 : 0;
+
+  SHIM_SET_RETURN_32(flags);
 }
 
 void xeVdQueryVideoMode(X_VIDEO_MODE* video_mode) {
@@ -97,7 +107,7 @@ void xeVdQueryVideoMode(X_VIDEO_MODE* video_mode) {
   video_mode->is_hi_def = 1;
   video_mode->refresh_rate = 60.0f;
   video_mode->video_standard = 1;   // NTSC
-  video_mode->unknown_0x8a = 0x94;  // 0x8A;
+  video_mode->unknown_0x8a = 0x4A;
   video_mode->unknown_0x01 = 0x01;
   video_mode->reserved[0] = video_mode->reserved[1] = video_mode->reserved[2] =
       0;
