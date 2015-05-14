@@ -244,24 +244,28 @@ bool Value::Add(Value* other) {
 }
 
 bool Value::Sub(Value* other) {
-#define SUB_DID_CARRY(a, b) (b > a)
+#define SUB_DID_CARRY(a, b) (b == 0 || a > (~(0-b)))
   assert_true(type == other->type);
   bool did_carry = false;
   switch (type) {
     case INT8_TYPE:
-      did_carry = SUB_DID_CARRY(constant.i8, other->constant.i8);
+      did_carry =
+          SUB_DID_CARRY(uint16_t(constant.i8), uint16_t(other->constant.i8));
       constant.i8 -= other->constant.i8;
       break;
     case INT16_TYPE:
-      did_carry = SUB_DID_CARRY(constant.i16, other->constant.i16);
+      did_carry =
+          SUB_DID_CARRY(uint16_t(constant.i16), uint16_t(other->constant.i16));
       constant.i16 -= other->constant.i16;
       break;
     case INT32_TYPE:
-      did_carry = SUB_DID_CARRY(constant.i32, other->constant.i32);
+      did_carry =
+          SUB_DID_CARRY(uint32_t(constant.i32), uint32_t(other->constant.i32));
       constant.i32 -= other->constant.i32;
       break;
     case INT64_TYPE:
-      did_carry = SUB_DID_CARRY(constant.i64, other->constant.i64);
+      did_carry =
+          SUB_DID_CARRY(uint64_t(constant.i64), uint64_t(other->constant.i64));
       constant.i64 -= other->constant.i64;
       break;
     case FLOAT32_TYPE:
@@ -297,6 +301,29 @@ void Value::Mul(Value* other) {
       break;
     case FLOAT64_TYPE:
       constant.f64 *= other->constant.f64;
+      break;
+    default:
+      assert_unhandled_case(type);
+      break;
+  }
+}
+
+void Value::MulHi(Value* other, bool is_unsigned) {
+  assert_true(type == other->type);
+  switch (type) {
+    case INT32_TYPE:
+      if (is_unsigned) {
+        constant.i32 = (int32_t)(((uint64_t)((uint32_t)constant.i32) * (uint32_t)other->constant.i32) >> 32);
+      } else {
+        constant.i32 = (int32_t)(((int64_t)constant.i32 * (int64_t)other->constant.i32) >> 32);
+      }
+      break;
+    case INT64_TYPE:
+      if (is_unsigned) {
+        constant.i64 = __umulh(constant.i64, other->constant.i64);
+      } else {
+        constant.i64 = __mulh(constant.i64, other->constant.i64);
+      }
       break;
     default:
       assert_unhandled_case(type);
