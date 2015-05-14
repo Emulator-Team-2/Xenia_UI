@@ -232,7 +232,7 @@ static uint32_t __stdcall XThreadStartCallbackWin32(void* param) {
 X_STATUS XThread::PlatformCreate() {
   bool suspended = creation_params_.creation_flags & 0x1;
   thread_handle_ =
-      CreateThread(NULL, creation_params_.stack_size,
+      CreateThread(NULL, 0,
                    (LPTHREAD_START_ROUTINE)XThreadStartCallbackWin32, this,
                    suspended ? CREATE_SUSPENDED : 0, NULL);
   if (!thread_handle_) {
@@ -273,7 +273,8 @@ X_STATUS XThread::PlatformCreate() {
   pthread_attr_t attr;
 
   pthread_attr_init(&attr);
-  pthread_attr_setstacksize(&attr, creation_params_.stack_size);
+  // TODO(benvanik): this shouldn't be necessary
+  //pthread_attr_setstacksize(&attr, creation_params_.stack_size);
 
   int result_code;
   if (creation_params_.creation_flags & 0x1) {
@@ -483,7 +484,7 @@ void XThread::SetAffinity(uint32_t affinity) {
   if (system_info.dwNumberOfProcessors < 6) {
     XELOGW("Too few processors - scheduling will be wonky");
   }
-  SetThreadAffinityMask(::GetCurrentThread(), affinity);
+  SetThreadAffinityMask(reinterpret_cast<HANDLE>(thread_handle_), affinity);
 }
 
 X_STATUS XThread::Resume(uint32_t* out_suspend_count) {
