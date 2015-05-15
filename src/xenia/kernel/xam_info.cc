@@ -162,7 +162,13 @@ SHIM_CALL XamEnumerate_shim(PPCContext* ppc_state, KernelState* state) {
 
   XEnumerator* e = nullptr;
   if (XFAILED(state->object_table()->GetObject(handle, (XObject**)&e))) {
-    SHIM_SET_RETURN_64(X_ERROR_INVALID_HANDLE);
+    if (overlapped_ptr) {
+      state->CompleteOverlappedImmediateEx(overlapped_ptr, 0,
+                                           X_ERROR_INVALID_HANDLE, 0);
+      SHIM_SET_RETURN_64(X_ERROR_IO_PENDING);
+    } else {
+      SHIM_SET_RETURN_64(X_ERROR_INVALID_HANDLE);
+    }
     return;
   }
 
@@ -175,7 +181,8 @@ SHIM_CALL XamEnumerate_shim(PPCContext* ppc_state, KernelState* state) {
     SHIM_SET_MEM_32(item_count_ptr, item_count);
   } else if (overlapped_ptr) {
     assert_zero(item_count_ptr);
-    state->CompleteOverlappedImmediate(overlapped_ptr, result, item_count);
+    state->CompleteOverlappedImmediateEx(overlapped_ptr, result, result,
+                                         item_count);
     result = X_ERROR_IO_PENDING;
   } else {
     assert_always();

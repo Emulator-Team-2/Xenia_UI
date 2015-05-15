@@ -318,12 +318,17 @@ void KernelState::BroadcastNotification(XNotificationID id, uint32_t data) {
   }
 }
 
-void KernelState::CompleteOverlapped(uint32_t overlapped_ptr, X_RESULT result,
-                                     uint32_t length) {
+void KernelState::CompleteOverlapped(uint32_t overlapped_ptr, X_RESULT result) {
+  CompleteOverlappedEx(overlapped_ptr, result, result, 0);
+}
+
+void KernelState::CompleteOverlappedEx(uint32_t overlapped_ptr, X_RESULT result,
+                                       uint32_t extended_error,
+                                       uint32_t length) {
   auto ptr = memory()->TranslateVirtual(overlapped_ptr);
   XOverlappedSetResult(ptr, result);
+  XOverlappedSetExtendedError(ptr, extended_error);
   XOverlappedSetLength(ptr, length);
-  XOverlappedSetExtendedError(ptr, result);
   X_HANDLE event_handle = XOverlappedGetEvent(ptr);
   if (event_handle) {
     XEvent* ev = nullptr;
@@ -334,24 +339,38 @@ void KernelState::CompleteOverlapped(uint32_t overlapped_ptr, X_RESULT result,
     }
   }
   if (XOverlappedGetCompletionRoutine(ptr)) {
-    assert_always();
     X_HANDLE thread_handle = XOverlappedGetContext(ptr);
     XThread* thread = nullptr;
     if (XSUCCEEDED(object_table()->GetObject(
             thread_handle, reinterpret_cast<XObject**>(&thread)))) {
+      uint32_t routine = XOverlappedGetCompletionRoutine(ptr);
+      uint64_t args[] = {
+          result, length, overlapped_ptr,
+      };
       // TODO(benvanik): queue APC on the thread that requested the overlapped
       // operation.
+      assert_always();
+      // THIS IS WRONG, for testing only:
+      processor()->Execute(XThread::GetCurrentThread()->thread_state(), routine,
+                           args, xe::countof(args));
+
       thread->Release();
     }
   }
 }
 
 void KernelState::CompleteOverlappedImmediate(uint32_t overlapped_ptr,
-                                              X_RESULT result,
-                                              uint32_t length) {
+                                              X_RESULT result) {
+  CompleteOverlappedImmediateEx(overlapped_ptr, result, result, 0);
+}
+
+void KernelState::CompleteOverlappedImmediateEx(uint32_t overlapped_ptr,
+                                                X_RESULT result,
+                                                uint32_t extended_error,
+                                                uint32_t length) {
   auto ptr = memory()->TranslateVirtual(overlapped_ptr);
   XOverlappedSetContext(ptr, XThread::GetCurrentThreadHandle());
-  CompleteOverlapped(overlapped_ptr, result, length);
+  CompleteOverlappedEx(overlapped_ptr, result, extended_error, length);
 }
 
 }  // namespace kernel
