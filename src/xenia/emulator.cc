@@ -116,10 +116,6 @@ X_STATUS Emulator::Setup() {
   if (!processor_->Setup()) {
     return result;
   }
-  result = audio_system_->Setup();
-  if (result) {
-    return result;
-  }
   result = graphics_system_->Setup(processor_.get(), main_window_->loop(),
                                    main_window_.get());
   if (result) {
@@ -135,6 +131,11 @@ X_STATUS Emulator::Setup() {
 
   // Shared kernel state.
   kernel_state_ = std::make_unique<KernelState>(this);
+
+  result = audio_system_->Setup();
+  if (result) {
+    return result;
+  }
 
   // HLE kernel modules.
   xboxkrnl_ = std::make_unique<XboxkrnlModule>(this, kernel_state_.get());
