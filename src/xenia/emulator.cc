@@ -30,7 +30,6 @@ using namespace xe::cpu;
 using namespace xe::debug;
 using namespace xe::gpu;
 using namespace xe::hid;
-using namespace xe::kernel;
 using namespace xe::kernel::fs;
 using namespace xe::ui;
 
@@ -47,14 +46,9 @@ Emulator::~Emulator() {
   xam_.reset();
   xboxkrnl_.reset();
   kernel_state_.reset();
-
   file_system_.reset();
 
   input_system_.reset();
-
-  // Give the systems time to shutdown before we delete them.
-  graphics_system_->Shutdown();
-  audio_system_->Shutdown();
   graphics_system_.reset();
   audio_system_.reset();
 
@@ -101,7 +95,7 @@ X_STATUS Emulator::Setup() {
   }
 
   // Initialize the GPU.
-  graphics_system_ = std::move(xe::gpu::Create());
+  graphics_system_ = std::move(xe::gpu::Create(this));
   if (!graphics_system_) {
     return X_STATUS_NOT_IMPLEMENTED;
   }
@@ -112,15 +106,6 @@ X_STATUS Emulator::Setup() {
     return X_STATUS_NOT_IMPLEMENTED;
   }
 
-  // Setup the core components.
-  if (!processor_->Setup()) {
-    return result;
-  }
-  result = graphics_system_->Setup(processor_.get(), main_window_->loop(),
-                                   main_window_.get());
-  if (result) {
-    return result;
-  }
   result = input_system_->Setup();
   if (result) {
     return result;
@@ -130,7 +115,17 @@ X_STATUS Emulator::Setup() {
   file_system_ = std::make_unique<FileSystem>();
 
   // Shared kernel state.
-  kernel_state_ = std::make_unique<KernelState>(this);
+  kernel_state_ = std::make_unique<kernel::KernelState>(this);
+
+  // Setup the core components.
+  if (!processor_->Setup()) {
+    return result;
+  }
+  result = graphics_system_->Setup(processor_.get(), main_window_->loop(),
+                                   main_window_.get());
+  if (result) {
+    return result;
+  }
 
   result = audio_system_->Setup();
   if (result) {
@@ -138,8 +133,8 @@ X_STATUS Emulator::Setup() {
   }
 
   // HLE kernel modules.
-  xboxkrnl_ = std::make_unique<XboxkrnlModule>(this, kernel_state_.get());
-  xam_ = std::make_unique<XamModule>(this, kernel_state_.get());
+  kernel_state_->LoadKernelModule<kernel::XboxkrnlModule>();
+  kernel_state_->LoadKernelModule<kernel::XamModule>();
 
   // Debugging server.
   debug_server_ = std::make_unique<DebugServer>(this);
@@ -201,7 +196,15 @@ X_STATUS Emulator::LaunchSTFSTitle(const std::wstring& path) {
 
 X_STATUS Emulator::CompleteLaunch(const std::wstring& path,
                                   const std::string& module_path) {
-  return xboxkrnl_->LaunchModule(module_path.c_str());
+  auto xboxkrnl = static_cast<kernel::XboxkrnlModule*>(
+      kernel_state_->GetModule("xboxkrnl.exe"));
+  int result = xboxkrnl->LaunchModule(module_path.c_str());
+  xboxkrnl->Release();
+  if (result == 0) {
+    return X_STATUS_SUCCESS;
+  } else {
+    return X_STATUS_UNSUCCESSFUL;
+  }
 }
 
 }  // namespace xe

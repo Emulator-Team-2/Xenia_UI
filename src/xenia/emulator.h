@@ -66,9 +66,6 @@ class Emulator {
 
   kernel::KernelState* kernel_state() const { return kernel_state_.get(); }
 
-  kernel::XboxkrnlModule* xboxkrnl() const { return xboxkrnl_.get(); }
-  kernel::XamModule* xam() const { return xam_.get(); }
-
   debug::DebugServer* debug_server() const { return debug_server_.get(); }
 
   X_STATUS Setup();
@@ -97,8 +94,6 @@ class Emulator {
   std::unique_ptr<kernel::fs::FileSystem> file_system_;
 
   std::unique_ptr<kernel::KernelState> kernel_state_;
-  std::unique_ptr<kernel::XamModule> xam_;
-  std::unique_ptr<kernel::XboxkrnlModule> xboxkrnl_;
 
   std::unique_ptr<debug::DebugServer> debug_server_;
 };
