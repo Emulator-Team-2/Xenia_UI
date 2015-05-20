@@ -43,8 +43,6 @@ Emulator::~Emulator() {
   debug_server_->Shutdown();
   debug_server_.reset();
 
-  xam_.reset();
-  xboxkrnl_.reset();
   kernel_state_.reset();
   file_system_.reset();
 
